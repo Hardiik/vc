@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    { "source": "/", "destination": "/vote-counter.html" },
+    { "source": "/count", "destination": "/vote-counter.html" },
+    { "source": "/dash", "destination": "/dashboard.html" },
+    { "source": "/dashboard", "destination": "/dashboard.html" }
+  ]
+}

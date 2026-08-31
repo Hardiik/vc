@@ -1,0 +1,9 @@
+{
+  "name": "ieu-election-vote-counter-vercel",
+  "version": "1.0.0",
+  "private": true,
+  "description": "IEU election vote counter, rewritten for Vercel serverless + Upstash Redis",
+  "dependencies": {
+    "@upstash/redis": "^1.34.0"
+  }
+}

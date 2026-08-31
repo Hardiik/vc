@@ -1,0 +1,87 @@
+{
+  "title": "IFFCO Employees Union — Election",
+  "date": "2026-08-31",
+  "ballots": [
+    {
+      "id": "exec",
+      "short": "EXEC",
+      "label": "Executive Members",
+      "accent": "#2f7fd6",
+      "soft": "#eef5fb",
+      "seats": 13,
+      "names": [
+        "Athwal Kamlesh Kumar G",
+        "Bhavik M. Gor",
+        "Bhupatsinh G. Rana",
+        "Chaitanyasinh V. Zala",
+        "Chirag B. Mehta",
+        "Choudhary Jayprakash P.",
+        "Devendrakumar N. Surajkar",
+        "Devendrakumar R. Prajapati",
+        "Dhawan Ashish S.",
+        "Hemant Manoharlal G.",
+        "Jayeshkumar K. Banker",
+        "Jivani Dhirendra B.",
+        "Joshi Abhishek N.",
+        "Joshi Dhaval K.",
+        "Jugal Kishore Sharma",
+        "Kalavadia Tejas R.",
+        "Limbachiya Keyur S.",
+        "Mahavirsinh M. Jadeja",
+        "Mehta Niravkumar N.",
+        "Muchhadiya Raju B.",
+        "Patel Chiragkumar K.",
+        "Patel HirenKumar G.",
+        "Patel Ketankumar M.",
+        "Patel Prafulkumar B.",
+        "Patel Umangkumar G.",
+        "Patel Yagneshkumar G.",
+        "Rajpurohit Niranjankumar",
+        "Ramani Vishal T.",
+        "Sachinkumar J. Patel",
+        "Sharad Yadav",
+        "Shingadiya Hiral R.",
+        "Solanki Rasmikkumar S.",
+        "Sonwal Ganesh B.",
+        "Sorathia Hitesh R.",
+        "Soumya Ranjan Mohanty",
+        "Tejas J Shingala",
+        "Trivedi Yagnikkumar K.",
+        "Vaghela Kamleshkumar K.",
+        "Vijay C. Suthar",
+        "Vinod H. Damor",
+        "Zandadiya Vinod P."
+      ]
+    },
+    {
+      "id": "pres",
+      "short": "PRESIDENT",
+      "label": "President",
+      "accent": "#2bb673",
+      "soft": "#eaf6f0",
+      "seats": 1,
+      "names": [
+        "Mayank K. Patel",
+        "Parmar Ranjitkumar P.",
+        "Rajendra A. Chawda",
+        "Sukesh Mangal",
+        "Trushar F. Patel",
+        "Vasantkumar J. Patel"
+      ]
+    },
+    {
+      "id": "gs",
+      "short": "GEN SECRETARY",
+      "label": "General Secretary",
+      "accent": "#e0913a",
+      "soft": "#fbf2ea",
+      "seats": 1,
+      "names": [
+        "Chetankumar D. Matang",
+        "Patel HirenKumar V.",
+        "Suresh R. Gameti",
+        "Vijay K. Panchal"
+      ]
+    }
+  ]
+}
