@@ -1,0 +1,957 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>IEU Election — Vote Counter</title>
+<style>
+:root{
+  color-scheme: light;
+  --bg:#eef1f5;
+  --ink:#10151c;
+  --muted:#5c6774;
+  --line:#d3dae3;
+  --tile:#ffffff;
+  --tile-alt:#f6f8fb;
+  --accent:#0f5ea8;
+  --accent-soft:#eef5fb;
+  --accent-ink:#ffffff;
+  --hit:#c8f0d2;
+  --minus:#b23b3b;
+  --gap:6px;
+  --hdr:56px;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{margin:0;padding:0;height:100%;overflow:hidden;overscroll-behavior:none;}
+body{
+  background:var(--bg);color:var(--ink);
+  font-family:"Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;
+  user-select:none;-webkit-user-select:none;
+  touch-action:manipulation;
+}
+button{font-family:inherit;cursor:pointer;border:0;background:none;color:inherit;}
+
+/* ---------- screens ---------- */
+.screen{position:fixed;inset:0;display:flex;flex-direction:column;}
+.screen[hidden]{display:none;}
+
+/* ---------- start gate ---------- */
+#gate{
+  align-items:center;justify-content:center;text-align:center;
+  background:linear-gradient(160deg,#0d3f6e,#0f5ea8 55%,#12734f);
+  color:#fff;padding:24px;
+}
+#gate h1{font-size:clamp(22px,4.6vmin,42px);margin:0 0 6px;letter-spacing:.5px;}
+#gate p{margin:0 0 24px;font-size:clamp(13px,2.1vmin,18px);opacity:.88;max-width:46ch;line-height:1.5;}
+#startBtn{
+  background:#fff;color:#0d3f6e;font-weight:800;
+  font-size:clamp(17px,3vmin,26px);padding:clamp(14px,2.6vmin,22px) clamp(30px,6vmin,60px);
+  border-radius:999px;box-shadow:0 10px 30px rgba(0,0,0,.28);letter-spacing:1px;
+}
+#startBtn:active{transform:translateY(2px);}
+.gatehint{margin-top:22px;font-size:clamp(11px,1.7vmin,14px);opacity:.72;line-height:1.6;}
+
+/* ---------- header ---------- */
+header{
+  height:var(--hdr);flex:0 0 var(--hdr);
+  display:flex;align-items:stretch;gap:6px;padding:6px;
+  background:#fff;border-bottom:3px solid var(--accent);
+}
+.hbtn{
+  border:1px solid var(--line);border-radius:10px;background:#f4f7fa;
+  font-weight:700;font-size:15px;padding:0 14px;display:flex;align-items:center;gap:7px;
+  min-width:54px;justify-content:center;
+}
+.hbtn:active{background:#e6ecf3;}
+.hbtn.wide{flex:0 0 clamp(112px,16vw,200px);font-size:clamp(15px,2.2vmin,19px);
+  background:var(--accent);color:var(--accent-ink);border-color:var(--accent);}
+.hbtn.wide:disabled{background:#dfe5ec;color:#9aa5b1;border-color:var(--line);}
+.htitle{flex:1;display:flex;align-items:center;gap:8px;min-width:0;padding:0 4px;}
+.bpill{
+  background:var(--accent);color:#fff;border-radius:6px;padding:4px 8px;
+  font-size:11px;font-weight:800;letter-spacing:1px;white-space:nowrap;
+}
+.tstack{min-width:0;display:flex;flex-direction:column;justify-content:center;}
+.tstack b{font-size:clamp(13px,2vmin,18px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  color:var(--accent);}
+.tstack span{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+
+/* ---------- grid ---------- */
+main{flex:1;min-height:0;padding:var(--gap);}
+#grid{
+  height:100%;width:100%;display:grid;gap:var(--gap);
+  grid-template-columns:repeat(var(--cols,7),minmax(0,1fr));
+  grid-template-rows:repeat(var(--rows,6),minmax(0,1fr));
+}
+.tile{
+  position:relative;overflow:hidden;--tbg:var(--tile);
+  background:var(--tbg);border:1px solid var(--line);border-radius:10px;
+  display:flex;flex-direction:column;align-items:stretch;
+  padding:4px 5px 2px;min-width:0;min-height:0;
+  box-shadow:0 1px 0 rgba(16,21,28,.04);
+}
+.tile.alt{--tbg:var(--tile-alt);}
+.tile .sr{
+  position:absolute;top:3px;left:6px;font-weight:800;color:#98a3b0;
+  letter-spacing:.5px;pointer-events:none;line-height:1;
+}
+.tile .nm{
+  margin:14px 0 0;flex:0 0 auto;max-height:42%;overflow:hidden;
+  font-weight:700;line-height:1.12;text-align:center;word-break:break-word;
+  pointer-events:none;
+}
+.tile .ct{
+  flex:1;min-height:0;display:flex;align-items:center;justify-content:center;
+  font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-1px;
+  color:var(--accent);pointer-events:none;
+}
+.tile.zero .ct{color:#c2cad3;}
+.tile .mn{
+  position:absolute;bottom:3px;right:3px;
+  width:clamp(28px,22%,44px);height:clamp(24px,26%,38px);
+  display:none;align-items:center;justify-content:center;
+  font-size:clamp(15px,2.3vmin,22px);font-weight:900;color:var(--minus);line-height:1;
+  background:#fdeeee;border:1px solid #e6c2c2;border-radius:8px;
+}
+.tile:not(.zero) .mn{display:flex;}
+.tile .mn:active{background:#f6cfcf;}
+.tile.hit1{animation:pop1 .17s ease-out;}
+.tile.hit2{animation:pop2 .17s ease-out;}
+.tile.dn1{animation:dna .17s ease-out;}
+.tile.dn2{animation:dnb .17s ease-out;}
+.tile.lead{border-color:#d8a417;box-shadow:0 0 0 2px rgba(216,164,23,.35) inset;}
+.tile.lead .sr{color:#a97a06;}
+.tile .lead-badge{
+  position:absolute;top:2px;right:4px;font-size:clamp(10px,1.6vmin,14px);
+  color:#a97a06;pointer-events:none;line-height:1;display:none;
+}
+.tile.lead .lead-badge{display:block;}
+
+/* ---------- sync / connection indicator ---------- */
+.connDot{
+  display:inline-block;width:7px;height:7px;border-radius:50%;
+  background:#b7bfc9;margin-right:5px;flex:0 0 auto;
+}
+.connDot.live{background:#2bb673;}
+.connDot.pending{background:#e0913a;}
+.connDot.off{background:#b7bfc9;}
+@keyframes pop1{0%{background:var(--hit);}100%{background:var(--tbg);}}
+@keyframes pop2{0%{background:var(--hit);}100%{background:var(--tbg);}}
+@keyframes dna{0%{background:#f7d6d6;}100%{background:var(--tbg);}}
+@keyframes dnb{0%{background:#f7d6d6;}100%{background:var(--tbg);}}
+
+/* ---------- sheets ---------- */
+.sheet{
+  position:fixed;inset:0;background:rgba(10,16,24,.5);
+  display:flex;align-items:center;justify-content:center;padding:16px;z-index:50;
+}
+.sheet[hidden]{display:none;}
+.card{
+  background:#fff;border-radius:14px;width:min(700px,96vw);max-height:92vh;
+  display:flex;flex-direction:column;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,.35);
+}
+.card h2{margin:0;padding:14px 16px;font-size:17px;border-bottom:1px solid var(--line);
+  display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.card .body{padding:14px 16px;overflow:auto;-webkit-overflow-scrolling:touch;}
+.card .foot{padding:12px 16px;border-top:1px solid var(--line);display:flex;gap:8px;flex-wrap:wrap;}
+.btn{border:1px solid var(--line);background:#f4f7fa;border-radius:10px;padding:11px 16px;font-weight:700;font-size:15px;}
+.btn:active{background:#e6ecf3;}
+.btn.pri{background:var(--accent);color:#fff;border-color:var(--accent);}
+.btn.dgr{background:#fff;color:var(--minus);border-color:#e3bcbc;}
+.btn.grow{flex:1;}
+.x{font-size:22px;line-height:1;padding:4px 10px;border-radius:8px;background:#f1f4f8;}
+
+.mhead{font-size:11px;text-transform:uppercase;letter-spacing:.9px;color:var(--muted);
+  margin:0 0 8px;font-weight:800;}
+.mlist{display:grid;gap:8px;}
+.mlist .btn{text-align:left;font-size:16px;padding:14px 16px;display:flex;
+  align-items:center;justify-content:space-between;gap:10px;}
+.mlist .btn .cnt{font-size:13px;color:var(--muted);font-weight:700;white-space:nowrap;}
+.mlist .btn.on{border-color:var(--accent);border-width:2px;background:var(--accent-soft);color:var(--accent);}
+.mlist .btn.on .cnt{color:var(--accent);}
+.msep{height:1px;background:var(--line);margin:16px 0 14px;}
+.swatch{width:12px;height:12px;border-radius:3px;flex:0 0 12px;}
+.mlist .btn > span:first-child{display:flex;align-items:center;gap:10px;min-width:0;}
+
+/* results */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(132px,1fr));gap:10px;margin-bottom:14px;}
+.stat{background:#f4f7fa;border:1px solid var(--line);border-radius:12px;padding:12px;}
+.stat .k{font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);}
+.stat .v{font-size:clamp(22px,4vmin,32px);font-weight:800;font-variant-numeric:tabular-nums;}
+.stat .v.warn{color:var(--minus);}
+.stat .v.ok{color:#12734f;}
+.field{display:flex;align-items:center;gap:10px;margin:0 0 14px;flex-wrap:wrap;}
+.field label{font-size:14px;font-weight:600;color:var(--muted);}
+.field input{
+  font:inherit;font-size:16px;padding:9px 11px;border:1px solid var(--line);border-radius:9px;
+  width:150px;background:#fff;color:var(--ink);
+}
+table{width:100%;border-collapse:collapse;font-size:15px;}
+th,td{padding:8px;border-bottom:1px solid #edf1f5;text-align:left;}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);
+  position:sticky;top:0;background:#fff;}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;font-weight:700;width:5.5em;}
+td.r,th.r{width:3em;color:var(--muted);font-weight:700;}
+tr.top td{background:#f2f9f4;}
+
+textarea{
+  width:100%;min-height:42vh;font:14px/1.5 ui-monospace,Consolas,monospace;
+  padding:11px;border:1px solid var(--line);border-radius:10px;resize:vertical;
+  background:#fff;color:var(--ink);
+}
+.hint{font-size:13px;color:var(--muted);line-height:1.5;margin:0 0 10px;}
+.hint b{color:var(--ink);}
+
+#toast{
+  position:fixed;left:50%;bottom:18px;transform:translateX(-50%) translateY(140%);
+  background:#10151c;color:#fff;padding:11px 18px;border-radius:999px;
+  font-size:15px;font-weight:600;z-index:80;transition:transform .16s ease-out;
+  max-width:88vw;text-align:center;pointer-events:none;
+}
+#toast.show{transform:translateX(-50%) translateY(0);}
+</style>
+</head>
+<body>
+
+<!-- ===================== START GATE ===================== -->
+<section class="screen" id="gate">
+  <h1>IEU ELECTION &mdash; VOTE COUNTER</h1>
+  <p>Three separate ballots: Executive Members, President and General Secretary. Switch between them from the menu &mdash; each keeps its own independent count.</p>
+  <button id="startBtn">START COUNTING</button>
+  <div class="gatehint">Opens full screen &middot; keeps the screen awake &middot; every count auto-saves</div>
+</section>
+
+<!-- ===================== COUNTING SCREEN ===================== -->
+<section class="screen" id="app" hidden>
+  <header>
+    <button class="hbtn" id="menuBtn" aria-label="Menu">&#9776;</button>
+    <div class="htitle">
+      <span class="bpill" id="bPill">EXEC</span>
+      <span class="tstack"><b id="appTitle">Executive Members</b><span id="appSub"><span class="connDot off" id="connDot"></span><span id="appSubTxt">tap a tile to add a vote</span></span></span>
+    </div>
+    <button class="hbtn wide" id="undoBtn" disabled>&#8630; UNDO</button>
+  </header>
+  <main><div id="grid"></div></main>
+</section>
+
+<!-- ===================== MENU ===================== -->
+<div class="sheet" id="menuSheet" hidden>
+  <div class="card">
+    <h2>Menu <button class="x" data-close>&times;</button></h2>
+    <div class="body">
+      <p class="mhead">Ballot &mdash; tap to switch</p>
+      <div class="mlist" id="ballotList"></div>
+      <div class="msep"></div>
+      <p class="mhead">This ballot</p>
+      <div class="mlist">
+        <button class="btn" id="goDash"><span>&#128225;&nbsp; Open projector view</span></button>
+        <button class="btn" id="goResults"><span>&#128202;&nbsp; Totals &amp; Results</span></button>
+        <button class="btn" id="goNames"><span>&#9998;&nbsp; Edit candidate names</span></button>
+        <button class="btn" id="goFull"><span>&#9974;&nbsp; Toggle full screen</span></button>
+        <button class="btn dgr" id="goReset"><span>&#9888;&nbsp; Reset this ballot to zero</span></button>
+      </div>
+    </div>
+    <div class="foot"><button class="btn pri grow" data-close>Back to counting</button></div>
+  </div>
+</div>
+
+<!-- ===================== RESULTS ===================== -->
+<div class="sheet" id="resSheet" hidden>
+  <div class="card">
+    <h2><span id="resTitle">Totals &amp; Results</span> <button class="x" data-close>&times;</button></h2>
+    <div class="body">
+      <div class="stats">
+        <div class="stat"><div class="k">Votes counted</div><div class="v" id="sTotal">0</div></div>
+        <div class="stat"><div class="k">Expected ballots</div><div class="v" id="sExp">&mdash;</div></div>
+        <div class="stat"><div class="k">Remaining</div><div class="v" id="sRem">&mdash;</div></div>
+        <div class="stat"><div class="k">Candidates with votes</div><div class="v" id="sAct">0</div></div>
+      </div>
+      <div class="field">
+        <label for="expIn">Expected total votes for this ballot</label>
+        <input id="expIn" type="number" min="0" inputmode="numeric" placeholder="e.g. 1200">
+      </div>
+      <table>
+        <thead><tr><th class="r">#</th><th>Candidate</th><th class="n">Votes</th><th class="n">Share</th></tr></thead>
+        <tbody id="resBody"></tbody>
+      </table>
+    </div>
+    <div class="foot">
+      <button class="btn" id="copyRes">Copy this ballot</button>
+      <button class="btn" id="csvRes">CSV: this ballot</button>
+      <button class="btn" id="csvAll">CSV: all 3 ballots</button>
+      <button class="btn pri grow" data-close>Back to counting</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== NAMES ===================== -->
+<div class="sheet" id="nameSheet" hidden>
+  <div class="card">
+    <h2><span id="nameTitle">Candidate names</span> <button class="x" data-close>&times;</button></h2>
+    <div class="body">
+      <p class="hint">One name per line, in <b>ballot / serial order</b>. The number of lines sets the number of tiles.
+        Counts stay attached to their position, so avoid reordering once counting has started.
+        This edits <b id="nameWhich">this ballot</b> only.</p>
+      <textarea id="nameBox" spellcheck="false"></textarea>
+    </div>
+    <div class="foot">
+      <button class="btn" data-close>Cancel</button>
+      <button class="btn pri grow" id="saveNames">Save names</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+(function(){
+"use strict";
+
+/* ==================================================================
+   BALLOTS — edit the name arrays here to change a ballot.
+   ================================================================== */
+var BALLOTS = [
+  {
+    id:"exec", short:"EXEC", label:"Executive Members",
+    accent:"#0f5ea8", soft:"#eef5fb", seats:13,
+    names:[
+      "Athwal Kamlesh Kumar G",     /*  1 */
+      "Bhavik M. Gor",              /*  2 */
+      "Bhupatsinh G. Rana",         /*  3 */
+      "Chaitanyasinh V. Zala",      /*  4 */
+      "Chirag B. Mehta",            /*  5 */
+      "Choudhary Jayprakash P.",    /*  6 */
+      "Devendrakumar N. Surajkar",  /*  7 */
+      "Devendrakumar R. Prajapati", /*  8 */
+      "Dhawan Ashish S.",           /*  9 */
+      "Hemant Manoharlal G.",       /* 10 */
+      "Jayeshkumar K. Banker",      /* 11 */
+      "Jivani Dhirendra B.",        /* 12 */
+      "Joshi Abhishek N.",          /* 13 */
+      "Joshi Dhaval K.",            /* 14 */
+      "Jugal Kishore Sharma",       /* 15 */
+      "Kalavadia Tejas R.",         /* 16 */
+      "Limbachiya Keyur S.",        /* 17 */
+      "Mahavirsinh M. Jadeja",      /* 18 */
+      "Mehta Niravkumar N.",        /* 19 */
+      "Muchhadiya Raju B.",         /* 20 */
+      "Patel Chiragkumar K.",       /* 21 */
+      "Patel HirenKumar G.",        /* 22 */
+      "Patel Ketankumar M.",        /* 23 */
+      "Patel Prafulkumar B.",       /* 24 */
+      "Patel Umangkumar G.",        /* 25 */
+      "Patel Yagneshkumar G.",      /* 26 */
+      "Rajpurohit Niranjankumar",   /* 27 */
+      "Ramani Vishal T.",           /* 28 */
+      "Sachinkumar J. Patel",       /* 29 */
+      "Sharad Yadav",               /* 30 */
+      "Shingadiya Hiral R.",        /* 31 */
+      "Solanki Rasmikkumar S.",     /* 32 */
+      "Sonwal Ganesh B.",           /* 33 */
+      "Sorathia Hitesh R.",         /* 34 */
+      "Soumya Ranjan Mohanty",      /* 35 */
+      "Tejas J Shingala",           /* 36 */
+      "Trivedi Yagnikkumar K.",     /* 37 */
+      "Vaghela Kamleshkumar K.",    /* 38 */
+      "Vijay C. Suthar",            /* 39 */
+      "Vinod H. Damor",             /* 40 */
+      "Zandadiya Vinod P."          /* 41 */
+    ]
+  },
+  {
+    id:"pres", short:"PRESIDENT", label:"President",
+    accent:"#11704a", soft:"#eaf6f0", seats:1,
+    names:[
+      "Mayank K. Patel",            /* 1 */
+      "Parmar Ranjitkumar P.",      /* 2 */
+      "Rajendra A. Chawda",         /* 3 */
+      "Sukesh Mangal",              /* 4 */
+      "Trushar F. Patel",           /* 5 */
+      "Vasantkumar J. Patel"        /* 6 */
+    ]
+  },
+  {
+    id:"gs", short:"GEN SECRETARY", label:"General Secretary",
+    accent:"#8a4a12", soft:"#fbf2ea", seats:1,
+    names:[
+      "Chetankumar D. Matang",      /* 1 */
+      "Patel HirenKumar V.",        /* 2 */
+      "Suresh R. Gameti",           /* 3 */
+      "Vijay K. Panchal"            /* 4 */
+    ]
+  }
+];
+
+var STORE_KEY = "voteCounter.ieu.v3";
+
+/* every ballot carries its own counts / undo history / expected total */
+BALLOTS.forEach(function(b){
+  b.counts  = b.names.map(function(){ return 0; });
+  b.history = [];
+  b.expected = null;
+});
+
+var cur = 0, B = BALLOTS[0];
+var tiles = [], ctEls = [], nmEls = [], srEls = [], flip = [];
+
+var root    = document.documentElement;
+var grid    = document.getElementById("grid");
+var undoBtn = document.getElementById("undoBtn");
+var toastEl = document.getElementById("toast");
+
+/* ==================================================================
+   PERSISTENCE — never blocks a tap, survives storage being unavailable
+   ================================================================== */
+var mem = null, saveTimer = 0;
+function storageGet(){ try{ return window.localStorage.getItem(STORE_KEY); }catch(e){ return mem; } }
+function storageSet(v){ try{ window.localStorage.setItem(STORE_KEY,v); }catch(e){ mem = v; } }
+function saveNow(){
+  saveTimer = 0;
+  var o = { v:3, active:cur, t:Date.now(), b:{} };
+  BALLOTS.forEach(function(b){ o.b[b.id] = {n:b.names, c:b.counts, h:b.history, e:b.expected}; });
+  storageSet(JSON.stringify(o));
+}
+function saveSoon(){ if(!saveTimer) saveTimer = setTimeout(saveNow, 500); }
+function load(){
+  var raw = storageGet(); if(!raw) return false;
+  var any = false;
+  try{
+    var d = JSON.parse(raw); if(!d || !d.b) return false;
+    BALLOTS.forEach(function(b){
+      var s = d.b[b.id]; if(!s || !s.n || !s.n.length) return;
+      var c = (s.c||[]).map(function(x){ x = parseInt(x,10); return isFinite(x)&&x>0 ? x : 0; });
+      var sum = 0; for(var k=0;k<c.length;k++) sum += c[k];
+      // Nothing counted on this ballot yet? Ignore the save, so an updated
+      // candidate list in a freshly-copied file always wins.
+      if(sum === 0) return;
+      b.names  = s.n.slice();
+      b.counts = c.slice(0, b.names.length);
+      while(b.counts.length < b.names.length) b.counts.push(0);
+      b.history  = Array.isArray(s.h) ? s.h.slice(-4000) : [];
+      b.expected = (s.e===0||s.e) ? s.e : null;
+      any = true;
+    });
+    if(any && typeof d.active === "number" && BALLOTS[d.active]){ cur = d.active; B = BALLOTS[cur]; }
+  }catch(e){ return false; }
+  return any;
+}
+window.addEventListener("pagehide", saveNow);
+window.addEventListener("beforeunload", saveNow);
+document.addEventListener("visibilitychange", function(){ if(document.hidden) saveNow(); });
+
+/* ==================================================================
+   SERVER SYNC — pushes every vote / undo / reset to the counting
+   server so the projector dashboard and the other tablets stay live.
+   Entirely optional: if this page was opened straight from a file
+   with no server (double-click on the tablet, no Wi-Fi), API_BASE is
+   null and none of this ever runs — counting stays local-only, same
+   as before. When it IS running, every mutation is queued in order
+   (so a reset always lands after every vote that preceded it) and the
+   queue survives a reload, so a dead Wi-Fi spell never drops a vote.
+   ================================================================== */
+var API_BASE = (location.protocol !== "file:" && location.host) ? "" : null;
+var CID_KEY = "voteCounter.ieu.clientId", SEQ_KEY = "voteCounter.ieu.seq", OUT_KEY = "voteCounter.ieu.outbox";
+var clientId, nextSeq, outbox;
+
+function loadSyncState(){
+  try{ clientId = window.localStorage.getItem(CID_KEY); }catch(e){ clientId = null; }
+  if(!clientId){
+    clientId = "tab-" + Math.random().toString(36).slice(2,10) + Date.now().toString(36);
+    try{ window.localStorage.setItem(CID_KEY, clientId); }catch(e){}
+  }
+  var s; try{ s = window.localStorage.getItem(SEQ_KEY); }catch(e){ s = null; }
+  nextSeq = (parseInt(s,10) || 0) + 1;
+  var raw; try{ raw = window.localStorage.getItem(OUT_KEY); }catch(e){ raw = null; }
+  try{ outbox = raw ? JSON.parse(raw) : []; }catch(e){ outbox = []; }
+  if(!Array.isArray(outbox)) outbox = [];
+}
+function saveOutbox(){ try{ window.localStorage.setItem(OUT_KEY, JSON.stringify(outbox)); }catch(e){} }
+function saveSeq(){ try{ window.localStorage.setItem(SEQ_KEY, String(nextSeq - 1)); }catch(e){} }
+
+function queueOp(ballotId, i, delta){
+  if(API_BASE === null) return;
+  outbox.push({ seq: nextSeq++, kind:"vote", ops:[[ballotId, i, delta]] });
+  saveSeq(); saveOutbox(); setConn("pending"); flushSoon();
+}
+function queueReset(ballotId){
+  if(API_BASE === null) return;
+  outbox.push({ seq: nextSeq++, kind:"reset", ballot: ballotId });
+  saveSeq(); saveOutbox(); setConn("pending"); flushSoon();
+}
+
+var flushing = false, flushT = 0, backoff = 500;
+function flushSoon(){ if(flushT || flushing) return; flushT = setTimeout(function(){ flushT = 0; flushNow(); }, 0); }
+function flushNow(){
+  if(flushing || API_BASE === null || !outbox.length) return;
+  flushing = true;
+  var item = outbox[0], url, body;
+  if(item.kind === "reset"){ url = API_BASE + "/api/reset"; body = {ballot:item.ballot}; }
+  else{ url = API_BASE + "/api/vote"; body = {clientId:clientId, seq:item.seq, ops:item.ops}; }
+  fetch(url, {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body)})
+    .then(function(r){ if(!r.ok) throw new Error("http " + r.status); return r.json(); })
+    .then(function(){
+      outbox.shift(); saveOutbox(); backoff = 500; flushing = false;
+      setConn(outbox.length ? "pending" : "live");
+      if(outbox.length) flushSoon();
+    })
+    .catch(function(){
+      flushing = false;
+      setConn("off");
+      backoff = Math.min(backoff * 1.7, 15000);
+      flushT = setTimeout(function(){ flushT = 0; flushNow(); }, backoff);
+    });
+}
+function setConn(kind){
+  var d = document.getElementById("connDot");
+  if(!d) return;
+  d.className = "connDot " + (kind === "live" ? "live" : kind === "pending" ? "pending" : "off");
+}
+window.addEventListener("online", function(){ backoff = 500; flushSoon(); });
+loadSyncState();
+if(API_BASE !== null){ setConn(outbox.length ? "pending" : "live"); if(outbox.length) flushSoon(); }
+
+/* ==================================================================
+   BUILD / SWITCH
+   ================================================================== */
+function buildGrid(){
+  grid.textContent = "";
+  tiles = []; ctEls = []; nmEls = []; srEls = []; flip = [];
+  var frag = document.createDocumentFragment();
+  for(var i=0;i<B.names.length;i++){
+    var t = document.createElement("div");
+    t.className = "tile" + (B.counts[i]===0 ? " zero" : "");
+    t.dataset.i = i;
+
+    var sr = document.createElement("div");
+    sr.className = "sr"; sr.textContent = (i+1);
+
+    var nm = document.createElement("div");
+    nm.className = "nm"; nm.textContent = B.names[i];
+
+    var ct = document.createElement("div");
+    ct.className = "ct"; ct.textContent = B.counts[i];
+
+    var mn = document.createElement("div");
+    mn.className = "mn"; mn.dataset.minus = "1"; mn.textContent = "−";
+
+    var lb = document.createElement("div");
+    lb.className = "lead-badge"; lb.textContent = "\u2605";
+
+    t.appendChild(sr); t.appendChild(nm); t.appendChild(ct); t.appendChild(mn); t.appendChild(lb);
+    frag.appendChild(t);
+    tiles.push(t); ctEls.push(ct); nmEls.push(nm); srEls.push(sr); flip.push(0);
+  }
+  grid.appendChild(frag);
+  layout(true);
+  refreshLead();
+}
+
+/* ==================================================================
+   LEADING-CANDIDATE HIGHLIGHT — marks the tiles currently inside the
+   winning cutoff (top `seats` by count) so counters can see who's
+   ahead without opening Results. Same local counts the Results screen
+   already uses, just kept live on the grid itself.
+   ================================================================== */
+var leadIdx = [];
+function refreshLead(){
+  var seats = B.seats || 1;
+  var order = B.counts.map(function(c,i){ return i; });
+  order.sort(function(a,b){ return B.counts[b] - B.counts[a] || a - b; });
+  var next = (seats >= order.length) ? [] : order.slice(0, seats).filter(function(i){ return B.counts[i] > 0; });
+  var nextSet = {}; next.forEach(function(i){ nextSet[i] = 1; });
+  leadIdx.forEach(function(i){ if(!nextSet[i] && tiles[i]) tiles[i].classList.remove("lead"); });
+  next.forEach(function(i){ if(tiles[i]) tiles[i].classList.add("lead"); });
+  leadIdx = next;
+}
+
+function paintChrome(){
+  root.style.setProperty("--accent", B.accent);
+  root.style.setProperty("--accent-soft", B.soft);
+  document.getElementById("bPill").textContent = B.short;
+  document.getElementById("appTitle").textContent = B.label;
+  document.getElementById("appSubTxt").textContent =
+    B.names.length + " candidates · tap a tile to add a vote";
+  undoBtn.disabled = B.history.length < 2;
+}
+
+function switchBallot(i){
+  if(i === cur){ closeAll(); return; }
+  saveNow();
+  cur = i; B = BALLOTS[i];
+  paintChrome(); buildGrid(); renderBallotList(); saveNow(); closeAll();
+  toast("Now counting: " + B.label);
+}
+
+function renderBallotList(){
+  var wrap = document.getElementById("ballotList");
+  wrap.textContent = "";
+  BALLOTS.forEach(function(b,i){
+    var btn = document.createElement("button");
+    btn.className = "btn" + (i===cur ? " on" : "");
+    var left = document.createElement("span");
+    var sw = document.createElement("span");
+    sw.className = "swatch"; sw.style.background = b.accent;
+    var lab = document.createElement("span"); lab.textContent = b.label;
+    left.appendChild(sw); left.appendChild(lab);
+    var cnt = document.createElement("span");
+    cnt.className = "cnt";
+    cnt.textContent = b.names.length + " candidates · " + sumOf(b) + " votes";
+    btn.appendChild(left); btn.appendChild(cnt);
+    btn.addEventListener("click", function(){ switchBallot(i); });
+    wrap.appendChild(btn);
+  });
+}
+
+/* ==================================================================
+   LAYOUT — pick the grid shape that makes tiles biggest without scroll
+   ================================================================== */
+var lastKey = "";
+function layout(force){
+  var n = B.names.length; if(!n) return;
+  var box = grid.getBoundingClientRect();
+  var W = box.width, H = box.height;
+  if(W < 40 || H < 40) return;
+  var key = B.id+"|"+n+"x"+Math.round(W)+"x"+Math.round(H);
+  if(key === lastKey && !force) return;
+  lastKey = key;
+
+  var gap = parseFloat(getComputedStyle(root).getPropertyValue("--gap")) || 6;
+  var best = null;
+  for(var cols=1; cols<=Math.min(12,n); cols++){
+    var rows = Math.ceil(n/cols);
+    var tw = (W - gap*(cols-1))/cols;
+    var th = (H - gap*(rows-1))/rows;
+    if(tw < 56 || th < 40) continue;
+    var ar = tw/th, shape = 1;
+    if(ar < 1.00) shape = Math.pow(ar, 0.6);           // squarer is fine, taller is not
+    else if(ar > 2.00) shape = Math.pow(2.00/ar, 1.2); // avoid letterboxed slivers
+    var fill = Math.pow(n/(cols*rows), 1.5);           // strongly prefer no empty cells
+    var score = tw*th*shape*fill;
+    if(!best || score > best.score) best = {cols:cols,rows:rows,score:score};
+  }
+  if(!best){
+    var c = Math.ceil(Math.sqrt(n*1.6));
+    best = {cols:c, rows:Math.ceil(n/c)};
+  }
+  grid.style.setProperty("--cols", best.cols);
+  grid.style.setProperty("--rows", best.rows);
+
+  for(var i=0;i<tiles.length;i++){
+    if(Math.floor(i/best.cols) % 2 === 1) tiles[i].classList.add("alt");
+    else tiles[i].classList.remove("alt");
+  }
+  fitText();
+}
+
+/* Shrink each name until it fits its box: no clipping at any size. */
+function fitText(){
+  if(!tiles.length) return;
+  var h = tiles[0].clientHeight, w = tiles[0].clientWidth;
+  var cbase = Math.max(20, Math.min(h*0.33, w*0.44));
+  var nbase = Math.max(10, Math.min(h*0.21, w*0.175));
+  var sbase = Math.max(10, Math.min(h*0.10, 22));
+  for(var i=0;i<tiles.length;i++){
+    ctEls[i].style.fontSize = cbase.toFixed(1)+"px";
+    srEls[i].style.fontSize = sbase.toFixed(1)+"px";
+    var nm = nmEls[i], fs = nbase, guard = 0;
+    nm.style.fontSize = fs.toFixed(1)+"px";
+    while((nm.scrollHeight > nm.clientHeight + 1 || nm.scrollWidth > nm.clientWidth + 1)
+          && fs > 8.5 && guard++ < 30){
+      fs -= 0.6; nm.style.fontSize = fs.toFixed(1)+"px";
+    }
+  }
+}
+
+/* ==================================================================
+   HOT PATH — one delegated listener, no querySelector, no reflow
+   ================================================================== */
+function flash(i, up){
+  var t = tiles[i], f = flip[i] = flip[i] ? 0 : 1;
+  t.classList.remove("hit1","hit2","dn1","dn2");
+  t.classList.add((up ? "hit" : "dn") + (f ? "1" : "2"));
+}
+function bump(i, delta){
+  var v = B.counts[i] + delta;
+  if(v < 0) return false;
+  B.counts[i] = v;
+  ctEls[i].textContent = v;
+  if(v === 0) tiles[i].classList.add("zero");
+  else if(v === 1 && delta > 0) tiles[i].classList.remove("zero");
+  flash(i, delta > 0);
+  B.history.push(i, delta);
+  if(B.history.length > 8000) B.history.splice(0, 4000);
+  if(undoBtn.disabled) undoBtn.disabled = false;
+  saveSoon();
+  refreshLead();
+  queueOp(B.id, i, delta);
+  return true;
+}
+function onDown(ev){
+  var el = ev.target;
+  var tile = el.closest ? el.closest(".tile") : null;
+  if(!tile) return;
+  var i = +tile.dataset.i;
+  if(el.dataset && el.dataset.minus){ if(bump(i,-1)) buzz(12); return; }
+  bump(i, 1); buzz(8);
+}
+if(window.PointerEvent){ grid.addEventListener("pointerdown", onDown); }
+else{
+  grid.addEventListener("touchstart", function(e){ onDown(e); }, {passive:true});
+  grid.addEventListener("mousedown", onDown);
+}
+grid.addEventListener("contextmenu", function(e){ e.preventDefault(); });
+grid.addEventListener("dblclick", function(e){ e.preventDefault(); });
+function buzz(ms){ if(navigator.vibrate){ try{ navigator.vibrate(ms); }catch(e){} } }
+
+undoBtn.addEventListener("click", function(){
+  if(B.history.length < 2){ undoBtn.disabled = true; return; }
+  var delta = B.history.pop(), i = B.history.pop();
+  B.counts[i] = Math.max(0, B.counts[i] - delta);
+  ctEls[i].textContent = B.counts[i];
+  if(B.counts[i] === 0) tiles[i].classList.add("zero"); else tiles[i].classList.remove("zero");
+  flash(i, delta < 0);
+  if(B.history.length < 2) undoBtn.disabled = true;
+  toast("Undone: " + (delta>0?"+1":"−1") + " " + B.names[i] + "  →  " + B.counts[i]);
+  saveSoon();
+  refreshLead();
+  queueOp(B.id, i, -delta);
+});
+
+/* ==================================================================
+   SHEETS
+   ================================================================== */
+function open(id){ document.getElementById(id).hidden = false; }
+function closeAll(){
+  ["menuSheet","resSheet","nameSheet"].forEach(function(id){
+    document.getElementById(id).hidden = true;
+  });
+}
+document.addEventListener("click", function(e){
+  if(e.target.hasAttribute && e.target.hasAttribute("data-close")) closeAll();
+});
+["menuSheet","resSheet","nameSheet"].forEach(function(id){
+  document.getElementById(id).addEventListener("click", function(e){ if(e.target === this) closeAll(); });
+});
+document.getElementById("menuBtn").addEventListener("click", function(){
+  renderBallotList(); open("menuSheet");
+});
+document.getElementById("goDash").addEventListener("click", function(){
+  closeAll();
+  if(API_BASE === null){ toast("No server for this screen — opened straight from a file. Open it via the server address to link the projector."); return; }
+  window.open(API_BASE + "/dash", "_blank");
+});
+document.getElementById("goResults").addEventListener("click", function(){ closeAll(); renderResults(); open("resSheet"); });
+document.getElementById("goNames").addEventListener("click", function(){
+  closeAll();
+  document.getElementById("nameTitle").textContent = "Candidate names — " + B.label;
+  document.getElementById("nameWhich").textContent = "the " + B.label + " ballot";
+  document.getElementById("nameBox").value = B.names.join("\n");
+  open("nameSheet");
+});
+document.getElementById("goFull").addEventListener("click", function(){ closeAll(); toggleFull(); });
+
+var resetArmed = 0;
+document.getElementById("goReset").addEventListener("click", function(){
+  var b = this, span = b.firstChild;
+  if(!resetArmed){
+    resetArmed = 1;
+    span.textContent = "⚠  Tap again to WIPE " + B.label;
+    setTimeout(function(){
+      resetArmed = 0; span.innerHTML = "&#9888;&nbsp; Reset this ballot to zero";
+    }, 4000);
+    return;
+  }
+  resetArmed = 0; span.innerHTML = "&#9888;&nbsp; Reset this ballot to zero";
+  for(var i=0;i<B.counts.length;i++){
+    B.counts[i] = 0; ctEls[i].textContent = 0; tiles[i].classList.add("zero");
+  }
+  B.history.length = 0; undoBtn.disabled = true;
+  saveNow(); closeAll(); toast(B.label + " reset to zero");
+  refreshLead();
+  queueReset(B.id);
+});
+
+/* ==================================================================
+   RESULTS
+   ================================================================== */
+var expIn = document.getElementById("expIn");
+expIn.addEventListener("input", function(){
+  var v = parseInt(this.value,10);
+  B.expected = isFinite(v) && v >= 0 ? v : null;
+  renderStats(); saveSoon();
+});
+function sumOf(b){ var s=0; for(var i=0;i<b.counts.length;i++) s += b.counts[i]; return s; }
+function total(){ return sumOf(B); }
+function renderStats(){
+  var tot = total(), act = 0;
+  for(var i=0;i<B.counts.length;i++) if(B.counts[i] > 0) act++;
+  document.getElementById("sTotal").textContent = tot.toLocaleString();
+  document.getElementById("sAct").textContent = act + " / " + B.counts.length;
+  var eEl = document.getElementById("sExp"), rEl = document.getElementById("sRem");
+  if(B.expected === null){ eEl.textContent = "—"; rEl.textContent = "—"; rEl.className = "v"; }
+  else{
+    eEl.textContent = B.expected.toLocaleString();
+    var rem = B.expected - tot;
+    rEl.textContent = rem < 0 ? "+"+Math.abs(rem)+" over" : rem.toLocaleString();
+    rEl.className = "v " + (rem < 0 ? "warn" : (rem === 0 ? "ok" : ""));
+  }
+}
+function rankedOf(b){
+  var rows = b.names.map(function(n,i){ return {n:n, c:b.counts[i], s:i+1}; });
+  rows.sort(function(x,y){ return y.c - x.c || x.s - y.s; });
+  return rows;
+}
+function renderResults(){
+  document.getElementById("resTitle").textContent = B.label + " — results";
+  renderStats();
+  expIn.value = B.expected === null ? "" : B.expected;
+  var tot = total(), rows = rankedOf(B), html = "";
+  for(var i=0;i<rows.length;i++){
+    var pc = tot ? (rows[i].c*100/tot) : 0;
+    html += "<tr"+(i<B.seats && rows[i].c>0 ? " class='top'" : "")+"><td class='r'>"+(i+1)+
+            "</td><td>"+esc(rows[i].n)+" <span style='color:#9aa5b1'>#"+rows[i].s+"</span></td>"+
+            "<td class='n'>"+rows[i].c+"</td><td class='n'>"+(tot?pc.toFixed(1)+"%":"—")+"</td></tr>";
+  }
+  document.getElementById("resBody").innerHTML = html;
+}
+function esc(s){
+  return String(s).replace(/[&<>]/g,function(c){ return c==="&"?"&amp;":c==="<"?"&lt;":"&gt;"; });
+}
+
+document.getElementById("copyRes").addEventListener("click", function(){
+  var rows = rankedOf(B), tot = total();
+  var txt = "IEU ELECTION — " + B.label.toUpperCase() + "\n" + new Date().toLocaleString() + "\n\n";
+  rows.forEach(function(r,i){ txt += (i+1) + ". " + r.n + " — " + r.c + "\n"; });
+  txt += "\nTotal votes counted: " + tot;
+  if(B.expected !== null) txt += "\nExpected: " + B.expected + " (remaining " + (B.expected - tot) + ")";
+  copy(txt);
+});
+function copy(txt){
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(txt).then(
+      function(){ toast("Copied to clipboard"); },
+      function(){ fallbackCopy(txt); });
+  }else fallbackCopy(txt);
+}
+function fallbackCopy(txt){
+  var ta = document.createElement("textarea");
+  ta.value = txt; ta.style.position = "fixed"; ta.style.opacity = "0";
+  document.body.appendChild(ta); ta.select();
+  try{ document.execCommand("copy"); toast("Copied to clipboard"); }
+  catch(e){ toast("Copy failed — use the CSV button"); }
+  document.body.removeChild(ta);
+}
+function csvFor(b){
+  var rows = rankedOf(b), tot = sumOf(b);
+  var s = b.label + "\nRank,Serial,Candidate,Votes,Share %\n";
+  rows.forEach(function(r,i){
+    s += (i+1)+","+r.s+",\""+String(r.n).replace(/"/g,'""')+"\","+r.c+","+(tot?(r.c*100/tot).toFixed(2):"0")+"\n";
+  });
+  s += "Total votes counted,,,"+tot+"\n";
+  if(b.expected !== null) s += "Expected,,,"+b.expected+"\nRemaining,,,"+(b.expected-tot)+"\n";
+  return s;
+}
+function download(csv, tag){
+  var d = new Date(), p = function(x){ return (x<10?"0":"")+x; };
+  var stamp = d.getFullYear()+p(d.getMonth()+1)+p(d.getDate())+"-"+p(d.getHours())+p(d.getMinutes());
+  var blob = new Blob(["﻿"+csv], {type:"text/csv;charset=utf-8"});
+  var a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "ieu-"+tag+"-"+stamp+".csv";
+  document.body.appendChild(a); a.click();
+  setTimeout(function(){ URL.revokeObjectURL(a.href); document.body.removeChild(a); }, 1500);
+  toast("CSV downloaded");
+}
+document.getElementById("csvRes").addEventListener("click", function(){ download(csvFor(B), B.id); });
+document.getElementById("csvAll").addEventListener("click", function(){
+  var csv = "IEU ELECTION — ALL BALLOTS," + new Date().toLocaleString() + "\n\n";
+  BALLOTS.forEach(function(b){ csv += csvFor(b) + "\n"; });
+  download(csv, "all-ballots");
+});
+
+/* ==================================================================
+   NAMES EDITOR — edits the active ballot only
+   ================================================================== */
+document.getElementById("saveNames").addEventListener("click", function(){
+  var lines = document.getElementById("nameBox").value.split("\n")
+      .map(function(s){ return s.replace(/^\s*\d+[\.\)]\s*/,"").trim(); })
+      .filter(function(s){ return s.length; });
+  if(!lines.length){ toast("Enter at least one name"); return; }
+  if(lines.length > 200){ toast("Too many names (max 200)"); return; }
+  var old = B.counts.slice();
+  B.names = lines;
+  B.counts = B.names.map(function(_,i){ return old[i] || 0; });
+  B.history.length = 0; undoBtn.disabled = true;
+  paintChrome(); buildGrid(); saveNow(); closeAll();
+  toast(B.names.length + " candidates loaded for " + B.label);
+});
+
+/* ==================================================================
+   FULL SCREEN / WAKE LOCK / TOAST
+   ================================================================== */
+function reqFull(el){
+  var f = el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen;
+  if(f){ try{ var p = f.call(el); if(p && p.catch) p.catch(function(){}); }catch(e){} }
+}
+function exitFull(){
+  var f = document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen;
+  if(f){ try{ var p = f.call(document); if(p && p.catch) p.catch(function(){}); }catch(e){} }
+}
+function isFull(){ return !!(document.fullscreenElement || document.webkitFullscreenElement); }
+function toggleFull(){ if(isFull()) exitFull(); else reqFull(root); }
+
+var wake = null;
+function keepAwake(){
+  if(!("wakeLock" in navigator)) return;
+  navigator.wakeLock.request("screen").then(function(s){ wake = s; }).catch(function(){});
+}
+document.addEventListener("visibilitychange", function(){ if(!document.hidden && !wake) keepAwake(); });
+
+var toastT = 0;
+function toast(msg){
+  toastEl.textContent = msg;
+  toastEl.classList.add("show");
+  clearTimeout(toastT);
+  toastT = setTimeout(function(){ toastEl.classList.remove("show"); }, 1800);
+}
+
+document.getElementById("startBtn").addEventListener("click", function(){
+  reqFull(root); keepAwake();
+  try{ if(screen.orientation && screen.orientation.lock) screen.orientation.lock("landscape").catch(function(){}); }catch(e){}
+  document.getElementById("gate").hidden = true;
+  document.getElementById("app").hidden = false;
+  layout(true);
+  setTimeout(function(){ layout(true); }, 120);
+});
+
+document.addEventListener("keydown", function(e){
+  if(e.key === "Escape"){ closeAll(); return; }
+  if((e.key === "z" || e.key === "Z") && (e.ctrlKey || e.metaKey)){ e.preventDefault(); undoBtn.click(); }
+  if(e.key === "F2"){ e.preventDefault(); toggleFull(); }
+  if(e.key === "1" || e.key === "2" || e.key === "3"){
+    if(!document.getElementById("menuSheet").hidden) switchBallot(+e.key - 1);
+  }
+});
+
+var rT = 0;
+function onResize(){ clearTimeout(rT); rT = setTimeout(function(){ layout(true); }, 90); }
+window.addEventListener("resize", onResize);
+window.addEventListener("orientationchange", onResize);
+if(window.ResizeObserver){ new ResizeObserver(function(){ layout(); }).observe(grid); }
+
+/* ---------- boot ---------- */
+var restored = load();
+paintChrome(); buildGrid(); renderBallotList();
+if(restored){
+  var grand = 0; BALLOTS.forEach(function(b){ grand += sumOf(b); });
+  if(grand > 0){
+    document.getElementById("startBtn").textContent = "RESUME COUNTING";
+    document.getElementById("appSubTxt").textContent =
+      "resumed · " + total() + " votes on this ballot";
+  }
+}
+saveNow();
+})();
+</script>
+</body>
+</html>
